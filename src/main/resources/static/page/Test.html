@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html>
+<script src="../js/vue/vue.js" charset="utf-8"></script>
+<!-- 引入组件库 -->
+<script src="../js/index.js"></script>
+<!-- 引入样式 -->
+<link rel="stylesheet" href="../js/elementUI/lib/theme-chalk/index.css">
+<link rel="stylesheet" href="../js/elementUI/lib/theme-chalk/display.css">
+<!--引入Vue和Axios-->
+<script src="../js/vue/vue.js"></script>
+<script src="../js/axios/axios.min.js"></script>
+<script src="../js/vue/vue-router.js"></script>
+<script src="../js/index.js"></script>
+<head>
+    <meta charset="UTF-8">
+
+</head>
+
+<body>
+<div id="app">
+    <el-container>
+        <el-aside width="200px">
+            <div>
+                <div>
+                    <el-row class="tac">
+                        <el-col style="height: 100%;">
+                            <el-menu
+                                    router
+                                    default-active="$route.path"
+                                    class="el-menu-vertical-demo"
+                                    background-color="#545c64"
+                                    text-color="#fff"
+                                    active-text-color="#ffd04b">
+                                <el-submenu index="/index">
+                                    <template slot="title">
+                                        <i class="el-icon-location"></i>
+                                        <span>我要记账</span>
+                                    </template>
+                                    <el-menu-item-group>
+                                        <el-menu-item index="/index/陈泽楷">陈泽楷</el-menu-item>
+                                        <el-menu-item index="/index/卢敏炫">卢敏炫</el-menu-item>
+                                        <el-menu-item index="/index/共同">共同的</el-menu-item>
+                                    </el-menu-item-group>
+                                </el-submenu>
+                                <el-menu-item index="/billQuery">
+                                    <i class="el-icon-menu"></i>
+                                    <span slot="title">账单明细</span>
+                                </el-menu-item>
+                                <el-menu-item index="3" disabled>
+                                    <i class="el-icon-document"></i>
+                                    <span slot="title">导航三</span>
+                                </el-menu-item>
+                                <el-menu-item index="4">
+                                    <i class="el-icon-setting"></i>
+                                    <span slot="title">导航四</span>
+                                </el-menu-item>
+                            </el-menu>
+                        </el-col>
+                    </el-row>
+                </div>
+            </div>
+
+        </el-aside>
+        <el-container>
+            <el-header>Header</el-header>
+            <el-main>
+                <div class="heightAll">
+                    <keep-alive>
+                            <router-view></router-view>
+                    </keep-alive>
+                </div>
+            </el-main>
+            <el-footer>Footer</el-footer>
+        </el-container>
+    </el-container>
+</div>
+<!--记一笔账-->
+<template id="indexTemp" >
+    <div >
+        <!--记账对话框-->
+        <el-form :model="form" ref="formInline" class="el-border" style="width: 200px;">
+            <el-form-item label="类型" :label-width="formLabelWidth">
+                <el-select  class="el-input-style" style="float:left;"  v-model="form.type" placeholder="请选择活动区域" @change="selectType(form.type)">
+                    <el-option label="支出" value="支出"></el-option>
+                    <el-option label="收入" value="收入"></el-option>
+                </el-select>
+            </el-form-item>
+
+            <el-form-item label="姓名" :label-width="formLabelWidth" prop="region3">
+                <el-input  class="el-input-style" v-model="form.person" autocomplete="off" >{{people}}</el-input>
+            </el-form-item>
+            <el-form-item label="项目" :label-width="formLabelWidth" prop="region1">
+                <el-select class="el-input-style" style="float:left" v-model="form.project" placeholder="请选择活动区域">
+                    <el-option v-for="item in projectSelect" :label="item.label" :value="item.value"></el-option>
+                </el-select>
+            </el-form-item>
+
+            <el-form-item label="时间" :label-width="formLabelWidth" prop="region2">
+                <el-col class="el-input-style">
+                    <el-date-picker type="date" placeholder="选择日期" v-model="form.date" alue-format="yyyy-MM-dd"
+                                    style="width: 100%;"></el-date-picker>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="金额" :label-width="formLabelWidth" prop="region3">
+                <el-input class="el-input-style" v-model="form.money" autocomplete="off" type="number"></el-input>
+            </el-form-item>
+            <el-form-item label="备注" :label-width="formLabelWidth" prop="region4">
+                <el-input class="el-input-style" v-model="form.note" autocomplete="off"></el-input>
+            </el-form-item>
+        </el-form>
+        <div slot="footer"  style="width: 50%;">
+            <el-button @click="reset">重 置</el-button>
+            <el-button type="primary" @click="submit">确 定</el-button>
+        </div>
+
+    </div>
+</template>
+
+<!--记账明细-->
+<template id="recordTemp">
+    <!--记账明细面板-->
+    <div>
+        <el-button style="float:left" type="primary" round>选择日期</el-button>
+        <el-button style="float:left" type="danger" icon="el-icon-delete" circle @click="deleteRecordsByIDs"></el-button>
+
+        <el-table
+                v-if="showBillRecordTable"
+                ref="filterTable"
+                :data="billTableData"
+                style="width: auto">
+            <el-table-column
+                    type="selection"
+                    width="55"
+                    height="55"
+            >
+            </el-table-column>
+            <el-table-column
+                    prop="date"
+                    label="日期"
+                    sortable
+                    width="120"
+            >
+            </el-table-column>
+            <el-table-column
+                    prop="person"
+                    label="姓名"
+                    width="120"
+                    column-key="person"
+                    :filters="[{text: '陈泽楷', value: '陈泽楷'}, {text: '卢敏炫', value: '卢敏炫'}, {text: '共同', value: '共同'}]"
+                    :filter-method="filterHandler"
+            >
+            </el-table-column>
+            <el-table-column
+                    prop="project"
+                    label="项目"
+                    width="120">
+            </el-table-column>
+            <el-table-column
+                    prop="money"
+                    label="金额"
+                    sortable
+                    width="120">
+            </el-table-column>
+            <el-table-column
+                    prop="note"
+                    label="备注"
+                    width="120">
+            </el-table-column>
+            <el-table-column
+                    prop="type"
+                    label="类型"
+                    width="120"
+                    :filters="[{ text: '支出', value: '支出' }, { text: '收入', value: '收入' }]"
+                    :filter-method="filterTag"
+                    filter-placement="bottom-end">
+                <template slot-scope="scope">
+                    <el-tag
+                            :type="scope.row.type === '支出' ? 'primary' : 'success'"
+                            disable-transitions>{{scope.row.type}}
+                    </el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column label="操作">
+                <template slot-scope="scope">
+                    <el-button
+                            size="mini"
+                            @click="handleEdit(scope.$index, scope.row)">编辑
+                    </el-button>
+                    <el-popconfirm
+                            title="这是一段内容确定删除吗？"
+                            @onConfirm = 'handleDelete(scope.$index, scope.row)'
+                    >
+                        <el-button
+                                slot="reference"
+                                size="mini"
+                                type="danger"
+
+                        >删除
+                        </el-button>
+                    </el-popconfirm>
+
+
+
+                </template>
+            </el-table-column>
+        </el-table>
+
+    </div>
+
+</template>
+<script>
+
+    var indexComp = {
+        props:['people'],
+        template:"#indexTemp",
+        data(){
+            return{
+                bill_title: "",
+                isNEW: true,
+                form: {
+                    id: "",
+                    person: "",
+                    type: "",
+                    project: "",
+                    date: "",
+                    money: "",
+                    note: ""
+                },
+                projectSelect: "",
+                projectSelect1: [
+                    {label: '早餐', value: '早餐'},
+                    {label: "午餐", value: "午餐"},
+                    {label: "晚餐", value: "晚餐"},
+                    {label: "交通", value: "交通"},
+                    {label: "家用", value: "家用"},
+                    {label: "零食/饮料", value: "零食/饮料"},
+                    {label: "水果", value: "水果"},
+                    {label: "水电费", value: "水电费"}
+                ],
+                projectSelect2: [
+                    {label: '撸羊毛', value: '撸羊毛'},
+                    {label: '红包', value: ' 红包'},
+                    {label: '工资', value: '工资'},
+
+                ],
+                formLabelWidth: "240px",
+                dialogFormVisible: false,
+
+
+            }
+        },
+        created: function () {
+            this.form.person = this.people;
+            this.form.type = "支出";
+            this.projectSelect = this.projectSelect1;
+            this.nowDate();
+        },
+
+        watch:{
+            people(val){
+              this.form.person = this.people ;
+            }
+        },
+        methods: {
+            // 记账对话框默认属性
+            lmx_bill: function () {
+                this.dialogFormVisible = true;
+                this.form.person = "卢敏炫";
+                this.bill_title = "卢敏炫记账";
+                this.isNEW = true;
+            },
+            czk_bill: function () {
+                this.dialogFormVisible = true;
+                this.form.person = "陈泽楷";
+                this.bill_title = "陈泽楷记账";
+                this.isNEW = true;
+            },
+            together_bill: function () {
+                this.dialogFormVisible = true;
+                this.form.person = "共同";
+                this.bill_title = "共同记账";
+                this.isNEW = true;
+            },
+            // 记账对话框重置默认属性
+            refreshField: function () {
+                //this.form.person = "";
+                this.form.type = "";
+                this.form.project = "";
+                this.form.date = "";
+                this.form.money = "";
+                this.form.note = "";
+                this.form.type = "支出";
+                this.projectSelect = this.projectSelect1;
+                this.nowDate();
+            },
+
+            // 记账对话框--类型选择
+            selectType: function (type) {
+                if (type == '支出') {
+                    this.form.project = "";
+                    this.projectSelect = this.projectSelect1;
+                } else if (type == '收入') {
+                    this.form.project = "";
+                    this.projectSelect = this.projectSelect2;
+                }
+            },
+
+            // 记账框重置
+            reset:function(){
+              this.refreshField();
+            },
+
+            // 检测表单数据
+            checkFormDateIsIllegal:function(){
+                if (this.form.type == ""||this.form.type == null) {
+                    vue_base.showWarnToast('请输入类型');
+                    return false
+                }
+                if (this.form.person == ""||this.form.person ==null) {
+                    vue_base.showWarnToast('请输入姓名');
+                    return false
+                }
+                if (this.form.project == ""||this.form.project ==null) {
+                    vue_base.showWarnToast('请输入项目名称');
+                    return false
+                }
+                if (this.form.date == ""||this.form.date ==null) {
+                    vue_base.showWarnToast('请输入日期');
+                    return false
+                }
+                if (this.form.money == ""||this.form.money ==null) {
+                    vue_base.showWarnToast('请输入金额');
+                    return false
+                }
+                // 处理时间
+                var time = this.form.date;//获取当前日期空间时间
+                if (time) {
+                    var date = new Date(Date.parse(time));
+                    var newDate = date.getFullYear() + "-" + (date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : (date.getMonth() + 1)) + "-" + (date.getDate() < 10 ? '0' + date.getDate() : date.getDate());
+                    this.form.date = newDate;
+                }
+
+                return true
+            },
+
+
+            nowDate:function(){
+                // 当前天数
+                var d = new Date();
+                var year1, month1, day1;
+                [year1, month1, day1] = [d.getFullYear(), d.getMonth(), d.getDate()];
+                var date1 = new Date(year1, month1, day1, 7);
+                this.form.date = date1;
+            },
+            // 记账对话框提交
+            submit: function () {
+                var _this = this;
+                if(_this.checkFormDateIsIllegal()){
+                    console.log(this.form);
+                    // 检查
+                    axios.defaults.headers.post['Content-Type'] = 'application/json';
+                    if (_this.isNEW == true) {
+                        axios.post("addRecord", JSON.stringify(_this.form)
+                        ).then(function (value) {
+                            if (value.data.success != null && value.data.success == true) {
+                                vue_base.showSuccessToast("上传成功");
+
+                            } else {
+                                vue_base.showErrorToast("上传失败");
+
+                            }
+
+                        }).catch(function (err) {
+                            vue_base.showErrorToast("上传失败："+err.message);
+
+                        });
+                    } else {
+                        axios.post("updateBillRecordById", JSON.stringify(_this.form)
+                        ).then(function (value) {
+                            if (value.data.success != null && value.data.success == true) {
+                                vue_base.showSuccessToast("更新成功");
+                            } else {
+                                vue_base.showErrorToast("更新失败");
+                            }
+                            _this.refreshRecords();
+                        }).catch(function (err) {
+                            vue_base.showErrorToast("更新失败："+err.message);
+                        });
+                    }
+                    _this.refreshField();
+                }
+            }
+        },
+    };
+
+    var recordComp ={
+        template:"#recordTemp",
+        data(){
+            return{
+                showBillRecordTable: true,
+                billTableData: [],
+            }
+        },
+        activated: function() {
+            this.refreshRecords();
+        },
+        methods:{
+            test:function(){
+              alert("asd");
+            },
+            // 记账面板--批量删除
+            deleteRecordsByIDs: function () {
+                var ids = this.$refs.filterTable.selection.map(x => {return x.id} ) ;
+                axios.get("delRecordByIDs?ids=" + ids).then(function (value) {
+                    if (value.data.success != null && value.data.success == true) {
+                        _this.refreshRecords();
+                    } else {
+
+                    }
+                }).catch(function (err) {
+                });
+            },
+            // 记账面板--删除按钮
+            handleDelete(value, row) {
+                var ids = [];
+                ids.push(row.id);
+                axios.get("delRecordByIDs?ids=" + ids).then(function (value) {
+                    if (value.data.success != null && value.data.success == true) {
+                        _this.refreshRecords();
+                        vue_base.showSuccessToast("删除成功")
+                    } else {
+                        vue_base.showErrorToast("删除失败")
+
+                    }
+                }).catch(function (err) {
+                });
+            },
+            // 记账面板--编辑按钮
+            handleEdit(value, row) {
+                console.log(row);
+                this.isNEW = false;
+                this.dialogFormVisible = true;
+                this.bill_title = "修改-" + row.person;
+                this.form.id = row.id;
+                this.form.person = row.person;
+                this.form.type = row.type;
+                this.form.money = row.money;
+                this.form.date = row.date;
+                this.form.note = row.note;
+                this.form.project = row.project;
+            },
+            // 记账面板筛选器
+            filterTag:function(value, row) {
+                return row.type === value;
+            },
+            filterHandler(value, row, column) {
+                const property = column['property'];
+                return row[property] === value;
+            },
+            // 刷新记账面板
+            refreshRecords() {
+                _this = this;
+                _this.showBillRecordTable = false;
+                axios.get("getAllRecord").then(function (value) {
+                    if (value.data.success != null && value.data.success == true) {
+                        console.log(value);
+                        _this.billTableData = value.data.data;
+                        console.log(_this.billTableData);
+                    } else {
+
+                    }
+                }).catch(function (err) {
+                });
+                _this.$nextTick(() => {
+                    _this.showBillRecordTable = true
+                })
+
+            },
+        }
+    };
+
+    var router = new VueRouter({
+        routes:[
+          //  {path:'/',redirect:'/index'},
+            {path:'/index/:people',component:indexComp,props:true},
+            {path:'/billQuery',component:recordComp},
+        ]
+    });
+
+    var vue_base = new Vue({
+        el:"#app",
+        data:{
+            path: '1',
+        },
+        methods: {
+            showWarnToast:function(msg){
+                this.$notify({
+                    title: '警告',
+                    message: msg,
+                    type: 'warning'
+                });
+            },
+            showSuccessToast:function(msg){
+                this.$notify({
+                    title: '成功',
+                    message: msg,
+                    type: 'success'
+                });
+            },
+            showErrorToast:function(msg){
+                this.$notify.error({
+                    title: '错误',
+                    message: msg
+                });
+            },
+        },
+        created () {
+
+        },
+        router
+    });
+
+</script>
+<style>
+
+    .el-border{
+        border-radius: 30px;
+    }
+    .el-input-style{
+        width: 210px;
+        float:left;
+    }
+    .el-header, .el-footer {
+        background-color: #409EFF;
+        color: #333;
+        text-align: center;
+        line-height: 60px;
+    }
+
+    .el-aside {
+        background-color: #409EFF;
+        color: #167329;
+        text-align: center;
+        line-height: 200px;
+    }
+
+    .el-main {
+        background-color: rgba(252, 90, 97, 0);
+        color: #333;
+        text-align: center;
+        line-height: 160px;
+    }
+
+    .heightAll{
+        height: 100%;
+    }
+
+    #app,html,body,.el-container{
+             height: 100%;
+    }
+
+</style>
+
+</body>
+
+
+</html>

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "mybatis-3-mapper.dtd" >
+
+<mapper namespace="com.example.book.dao.BillDao">
+
+
+    <resultMap id="BillMap" type="com.example.book.bean.BillRecord">
+        <result property="id" column="id"/>
+        <result property="person" column="person" />
+        <result property="type" column="type" />
+        <result property="project" column="project" />
+        <result property="date" column="date"/>
+        <result property="money" column="money"/>
+        <result property="note" column="note"/>
+        <result property="createTime" column="createtime"/>
+        <result property="lastUpdateTime" column="lastupdatetime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List" >
+        id,
+        person,
+        type,
+        project,
+        date,
+        money,
+        note,
+        createtime,
+        lastupdatetime
+    </sql>
+
+    <!--添加记录-->
+    <insert id="addRecord" parameterType="billRecord">
+        insert into
+            bill_table(<include refid="Base_Column_List"/>)
+        values(
+            #{id},#{person},#{type},#{project},#{date},#{money},#{note},#{createTime},#{lastUpdateTime}
+        )
+    </insert>
+
+    <!--查询所有记录-->
+    <select id="getAllRecord" resultMap="BillMap">
+        SELECT
+            <include refid="Base_Column_List"/>
+        FROM
+            book_db.bill_table
+
+        ORDER BY
+            UNIX_TIMESTAMP(date) DESC
+    </select>
+
+    <!--批量删除数据-->
+    <delete id="delRecordByIDs">
+        DELETE
+        FROM
+        book_db.bill_table
+        WHERE id IN
+        <foreach collection="array" item="outputId" open="(" separator="," close=")">
+            #{outputId}
+        </foreach>
+    </delete>
+
+
+    <update id="updateBillRecordById" parameterType="billRecord">
+        UPDATE
+            book_db.bill_table
+        SET
+            person = #{person},
+            type = #{type},
+            project = #{project},
+            date = #{date},
+            money = #{money},
+            note =#{ note},
+            lastupdatetime = #{lastUpdateTime}
+        WHERE
+            id = #{id}
+    </update>
+</mapper>
